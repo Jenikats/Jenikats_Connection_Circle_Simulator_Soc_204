@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connection Circle Simulator — Draw, Save & Print | SOC 204</title>
+<style>
+  :root{--ink:#1a2340;--ink-soft:#4a5878;--panelbg:#f7f9fc;--line:#d8dfe8;
+    --cyan:#1c93b6;--pink:#d6457f;--teal:#2a9d8f;--accent:#e85d3a;--gold:#e9c46a;--lilac:#8a6fbf;
+    --good:#2a9d8f;--warn:#e85d3a;--bg-2:#1a2340;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#1a2340,#0f1724);color:var(--ink);min-height:100vh;}
+  body{padding:14px;}
+  .app{max-width:1280px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;}
+  .head{background:linear-gradient(135deg,#1c93b6,#264653);color:#fff;padding:18px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;}
+  .head h1{margin:0;font-size:22px;}
+  .head .sub{font-size:13px;opacity:.9;}
+  .modes{display:flex;gap:6px;}
+  .mode{background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.25);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+  .mode.on{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+  .tools{background:#f3f5f9;padding:10px 18px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line);}
+  .tool{background:#fff;border:2px solid var(--line);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:6px;}
+  .tool:hover{border-color:var(--cyan);}
+  .tool.on{background:var(--cyan);color:#fff;border-color:var(--cyan);}
+  .tool.danger:hover{border-color:var(--accent);color:var(--accent);}
+  .tool.gold{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  .tool.save{background:var(--teal);border-color:var(--teal);color:#fff;}
+  .tool.save:hover{background:#21847a;}
+  .sep{width:1px;height:24px;background:var(--line);margin:0 6px;}
+  .main{display:grid;grid-template-columns:1fr 340px;gap:0;}
+  .canvas-wrap{background:#fff;padding:18px;}
+  .canvas-wrap svg{width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px;display:block;}
+  .side{background:var(--panelbg);padding:18px 22px;border-left:1px solid var(--line);max-height:780px;overflow-y:auto;}
+  .side h3{margin:0 0 8px;color:var(--cyan);font-size:13px;text-transform:uppercase;letter-spacing:1.2px;}
+  .stage-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:10px;padding:14px 16px;margin-bottom:10px;}
+  .stage-card.on{border-left-color:var(--pink);background:#fff7fb;}
+  .stage-card.done{border-left-color:var(--good);background:#f5fbf9;}
+  .stage-card .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--ink-soft);font-weight:700;}
+  .stage-card h4{margin:4px 0 6px;font-size:15px;color:var(--ink);}
+  .stage-card p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.5;}
+  .stage-actions{display:flex;gap:6px;margin-top:8px;}
+  .stage-actions button{background:var(--cyan);color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;}
+  .stage-actions button.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+  .hint{font-size:12px;color:var(--ink-soft);background:#fff7e6;border:1px solid #f4d590;padding:10px 12px;border-radius:8px;margin:10px 0;}
+  .legend{margin-top:14px;font-size:12px;color:var(--ink-soft);}
+  .legend .row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .legend .sw{width:18px;height:8px;border-radius:2px;}
+  .legend .sw.pos{background:var(--teal);}.legend .sw.neg{background:var(--accent);}
+  .legend .sw.loop1{background:var(--pink);}.legend .sw.loop2{background:var(--lilac);}.legend .sw.loop3{background:var(--gold);}
+  .footer{background:#f3f5f9;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);flex-wrap:wrap;gap:10px;}
+  .footer .stats{display:flex;gap:18px;}
+  .footer .stats span b{color:var(--ink);}
+  /* SVG element styling */
+  .node-bg{fill:#fff;stroke:var(--cyan);stroke-width:2.5;cursor:pointer;}
+  .node-bg:hover{fill:#e7f5fa;}
+  .node-bg.sel{fill:#fff3da;stroke:var(--gold);stroke-width:3.5;}
+  .node-bg.del-hover{stroke:var(--accent);fill:#fde6df;}
+  .node-label{font-size:13px;font-weight:600;fill:var(--ink);pointer-events:none;text-anchor:middle;}
+  .edge-path{fill:none;stroke:#888;stroke-width:2;cursor:pointer;}
+  .edge-path.pos{stroke:var(--teal);}.edge-path.neg{stroke:var(--accent);}
+  .edge-path:hover{stroke-width:3.5;}
+  .edge-path.del-hover{stroke:var(--accent);stroke-width:4;}
+  .edge-label{font-size:18px;font-weight:700;cursor:pointer;text-anchor:middle;dominant-baseline:central;}
+  .edge-label.pos{fill:var(--teal);}.edge-label.neg{fill:var(--accent);}
+  .loop-edge{stroke-width:4.5 !important;opacity:.9;}
+  .guide{fill:none;stroke:#dde3eb;stroke-width:2;stroke-dasharray:4 4;}
+  .instr{font-size:13px;fill:var(--ink-soft);text-anchor:middle;font-style:italic;}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(15,23,36,.55);display:none;align-items:center;justify-content:center;z-index:50;}
+  .modal-bg.on{display:flex;}
+  .modal{background:#fff;border-radius:12px;padding:24px;width:min(440px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .modal h3{margin:0 0 6px;color:var(--ink);}
+  .modal p{font-size:13px;color:var(--ink-soft);margin:0 0 12px;}
+  .modal input{width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:8px;font-size:15px;font-family:inherit;}
+  .modal input:focus{border-color:var(--cyan);outline:none;}
+  .modal .row{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+  .modal button{padding:9px 18px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .modal .cancel{background:#fff;color:var(--ink);border:2px solid var(--line);}
+  .modal .ok{background:var(--cyan);color:#fff;}
+  .suggest{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0;}
+  .suggest .sg{background:#eef6f9;border:1.5px solid #c3e1ec;color:var(--cyan);padding:4px 9px;border-radius:14px;font-size:12px;cursor:pointer;}
+  .suggest .sg:hover{background:var(--cyan);color:#fff;border-color:var(--cyan);}
+  @media print{
+    body{background:#fff;padding:0;}
+    .head,.tools,.side,.footer,.modal-bg{display:none !important;}
+    .app{box-shadow:none;border-radius:0;}
+    .canvas-wrap{padding:0;}
+    .main{grid-template-columns:1fr;}
+  }
+  @media (max-width:900px){.main{grid-template-columns:1fr;}.side{border-left:none;border-top:1px solid var(--line);}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div>
+      <h1>⭕ Connection Circle Simulator</h1>
+      <div class="sub">Draw your connection circle and feedback loops · save or print your final product</div>
+    </div>
+    <div class="modes" id="modes"></div>
+  </div>
+
+  <div class="tools">
+    <button class="tool gold" onclick="openAddNode()">＋ Add element</button>
+    <button class="tool" id="t-arrow" onclick="setTool('arrow')">↗ Add arrow</button>
+    <button class="tool" id="t-del" onclick="setTool('delete')">✕ Delete</button>
+    <button class="tool" onclick="togglePolaritySelected()">± Toggle +/−</button>
+    <div class="sep"></div>
+    <button class="tool" id="t-loops" onclick="toggleLoops()">🔁 Highlight loops</button>
+    <div class="sep"></div>
+    <button class="tool save" onclick="savePNG()">💾 Save PNG</button>
+    <button class="tool" onclick="saveSVG()">📥 SVG</button>
+    <button class="tool" onclick="window.print()">🖨 Print</button>
+    <div class="sep"></div>
+    <button class="tool danger" onclick="clearAll()">🗑 Clear</button>
+  </div>
+
+  <div class="main">
+    <div class="canvas-wrap">
+      <svg id="canvas" viewBox="0 0 800 640" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrPos" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--teal)"/></marker>
+          <marker id="arrNeg" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--accent)"/></marker>
+          <marker id="arrLoop1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--pink)"/></marker>
+          <marker id="arrLoop2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--lilac)"/></marker>
+          <marker id="arrLoop3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="var(--gold)"/></marker>
+        </defs>
+        <circle class="guide" cx="400" cy="320" r="220"/>
+        <text id="emptyInstr" class="instr" x="400" y="320">Click "+ Add element" to begin.</text>
+        <g id="edgesLayer"></g>
+        <g id="nodesLayer"></g>
+        <g id="labelsLayer"></g>
+      </svg>
+    </div>
+
+    <div class="side">
+      <h3 id="stagesTitle">Your prompts</h3>
+      <div id="stages"></div>
+      <div class="hint" id="hint">Tip: keep your elements specific — "French Fries Sold" works better than "Fries." Intangibles like "trust" or "concern" are allowed and often the most important.</div>
+      <div class="legend">
+        <h3 style="margin-top:14px;">Legend</h3>
+        <div class="row"><span class="sw pos"></span> Positive (+) — same direction</div>
+        <div class="row"><span class="sw neg"></span> Negative (−) — opposite</div>
+        <div class="row"><span class="sw loop1"></span><span class="sw loop2"></span><span class="sw loop3"></span> Highlighted feedback loops</div>
+      </div>
+      <div class="legend" style="margin-top:12px;">
+        <h3>Keyboard</h3>
+        <div class="row"><b>A</b> &nbsp; add element</div>
+        <div class="row"><b>X</b> &nbsp; toggle delete mode</div>
+        <div class="row"><b>L</b> &nbsp; highlight loops</div>
+        <div class="row"><b>Esc</b> &nbsp; cancel current tool</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="stats">
+      <span>Elements: <b id="cn">0</b></span>
+      <span>Arrows: <b id="ce">0</b></span>
+      <span>Loops found: <b id="cl">0</b></span>
+    </div>
+    <div id="footStatus">Ready.</div>
+  </div>
+</div>
+
+<!-- Modal for adding/editing element -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">Add element</h3>
+    <p id="modalSub">A noun or noun phrase that can increase or decrease. Keep it short and specific.</p>
+    <input id="modalInput" placeholder="e.g., shared laughter" autocomplete="off">
+    <div class="suggest" id="modalSuggest"></div>
+    <div class="row">
+      <button class="cancel" onclick="closeModal()">Cancel</button>
+      <button class="ok" onclick="confirmModal()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ Configuration ============ */
+const CX = 400, CY = 320, R = 220;
+const MODES = {
+  date: {
+    name: "💘 Ideal Date",
+    suggestions: ["shared laughter","feeling heard","good questions","nerves","phone use","eye contact","common interests","openness","awkward silences","time flying","attraction","conversation flow"],
+    stages: [
+      {label:"Step 1",title:"Brainstorm elements",body:"Add 5–10 things that change during a date. Nouns that can go up or down. Use the suggestions to start."},
+      {label:"Step 2",title:"Draw cause-and-effect arrows",body:"Click 'Add arrow' → click the cause → click the effect. Then click the arrow's +/− to set polarity."},
+      {label:"Step 3",title:"Find the loops",body:"Hit 'Highlight loops.' Trace each one. Which is reinforcing? Which is balancing?"},
+      {label:"Step 4",title:"Spot leverage",body:"Which element has the most arrows in and out? That's your leverage point."},
+      {label:"Step 5",title:"Save / print",body:"Save your circle as PNG (or SVG), or print to share with the class."}
+    ]
+  },
+  urban: {
+    name: "🏙️ Urban Sociology",
+    suggestions: ["rent","evictions","new arrivals","long-time residents","new businesses","tax base","grocery stores","fresh-food access","resident income","transit access","bus ridership","trust in city","vacant lots","crime perception","property values","school funding","racial composition","investment","blight","commute time"],
+    stages: [
+      {label:"Step 1",title:"Pick your story",body:"As a group, name your urban issue and the central problem in two sentences."},
+      {label:"Step 2",title:"Brainstorm elements",body:"5–10 elements: nouns, can-change, important to the story. Intangibles like trust or concern count."},
+      {label:"Step 3",title:"Draw cause-and-effect arrows",body:"Click 'Add arrow' → click the cause → click the effect. Be ready to say WHY each arrow exists. Mark + or −."},
+      {label:"Step 4",title:"Find feedback loops",body:"Hit 'Highlight loops.' Each closed path is a feedback loop. Name each one R (reinforcing) or B (balancing)."},
+      {label:"Step 5",title:"Identify leverage",body:"Which element has the most arrows? What's the smallest move that could change the loop's direction?"},
+      {label:"Step 6",title:"Save / print",body:"Save your circle and bring it to share with the class."}
+    ]
+  },
+  free: {
+    name: "✨ Free draw",
+    suggestions: [],
+    stages: [
+      {label:"Step 1",title:"Add elements",body:"5–10 nouns that can increase or decrease in your system."},
+      {label:"Step 2",title:"Draw arrows",body:"Click 'Add arrow' → click cause → click effect. Toggle +/− on the arrow label."},
+      {label:"Step 3",title:"Find loops",body:"Click 'Highlight loops.'"},
+      {label:"Step 4",title:"Save / print",body:"Export your circle as PNG, SVG, or print."}
+    ]
+  }
+};
+
+/* ============ State ============ */
+const state = {
+  mode: "date",
+  stageDone: new Set(),
+  nodes: [],   // {id, label}
+  edges: [],   // {id, from, to, pol: '+'/'-'}
+  nextId: 1,
+  tool: "none", // none | arrow | delete
+  pendingFrom: null,
+  loops: [],
+  selectedEdge: null,
+};
+
+/* ============ DOM helpers ============ */
+const $ = id => document.getElementById(id);
+function setStatus(t){$("footStatus").textContent = t;}
+
+/* ============ Mode + stages ============ */
+function renderModes(){
+  const w = $("modes"); w.innerHTML = "";
+  for (const k in MODES){
+    const b = document.createElement("button");
+    b.className = "mode" + (state.mode===k?" on":"");
+    b.textContent = MODES[k].name;
+    b.onclick = () => { state.mode = k; state.stageDone.clear(); renderModes(); renderStages(); };
+    w.appendChild(b);
+  }
+}
+function renderStages(){
+  const s = MODES[state.mode].stages;
+  const w = $("stages"); w.innerHTML = "";
+  s.forEach((stg,i)=>{
+    const d = document.createElement("div");
+    d.className = "stage-card" + (state.stageDone.has(i)?" done":(state.stageDone.size===i?" on":""));
+    d.innerHTML = `<div class="lbl">${stg.label}</div><h4>${stg.title}</h4><p>${stg.body}</p>
+      <div class="stage-actions">${state.stageDone.has(i)?'<button class="ghost" onclick="undoneStage('+i+')">↶ Undo</button>':'<button onclick="doneStage('+i+')">✓ Mark done</button>'}</div>`;
+    w.appendChild(d);
+  });
+}
+function doneStage(i){state.stageDone.add(i);renderStages();}
+function undoneStage(i){state.stageDone.delete(i);renderStages();}
+
+/* ============ Layout ============ */
+function redistribute(){
+  const n = state.nodes.length; if (!n) return;
+  state.nodes.forEach((node,i)=>{
+    const a = (i/n)*2*Math.PI - Math.PI/2;
+    node.angle = a;
+    node.x = CX + R*Math.cos(a);
+    node.y = CY + R*Math.sin(a);
+  });
+}
+function nodeById(id){return state.nodes.find(n=>n.id===id);}
+
+/* ============ Add / delete ============ */
+function openAddNode(){
+  $("modalTitle").textContent = "Add element";
+  $("modalSub").textContent = "A noun or noun phrase that can increase or decrease. Keep it short and specific.";
+  $("modalInput").value = "";
+  const sug = $("modalSuggest"); sug.innerHTML = "";
+  MODES[state.mode].suggestions.slice(0,12).forEach(s=>{
+    const used = state.nodes.some(n=>n.label.toLowerCase()===s.toLowerCase());
+    if (used) return;
+    const b=document.createElement("button"); b.className="sg"; b.textContent=s;
+    b.onclick=()=>{$("modalInput").value=s; $("modalInput").focus();};
+    sug.appendChild(b);
+  });
+  $("modal").classList.add("on"); setTimeout(()=>$("modalInput").focus(),50);
+}
+function closeModal(){$("modal").classList.remove("on");}
+function confirmModal(){
+  const v = $("modalInput").value.trim();
+  if (!v) return closeModal();
+  if (state.nodes.length>=12){setStatus("Max 12 elements — delete some to add more."); return closeModal();}
+  state.nodes.push({id:state.nextId++, label:v});
+  redistribute(); render(); setStatus(`Added "${v}".`);
+  if (!state.stageDone.has(0) && state.nodes.length>=4){/* hint */}
+  closeModal();
+}
+$("modalInput")?.addEventListener("keydown",e=>{if(e.key==="Enter")confirmModal();else if(e.key==="Escape")closeModal();});
+
+function setTool(t){
+  if (state.tool===t){state.tool="none";state.pendingFrom=null;}
+  else{state.tool=t;state.pendingFrom=null;}
+  $("t-arrow").classList.toggle("on",state.tool==="arrow");
+  $("t-del").classList.toggle("on",state.tool==="delete");
+  if (state.tool==="arrow") setStatus("Arrow mode: click the CAUSE, then the EFFECT.");
+  else if (state.tool==="delete") setStatus("Delete mode: click any element or arrow to remove it.");
+  else setStatus("Ready.");
+}
+
+function clickNode(id){
+  if (state.tool==="arrow"){
+    if (state.pendingFrom===null){state.pendingFrom=id;render();setStatus("Now click the EFFECT.");}
+    else if (state.pendingFrom===id){state.pendingFrom=null;render();setStatus("Cancelled.");}
+    else{
+      // create edge
+      const exists = state.edges.some(e=>e.from===state.pendingFrom && e.to===id);
+      if (!exists){
+        state.edges.push({id:state.nextId++, from:state.pendingFrom, to:id, pol:"+"});
+        setStatus("Arrow added (+). Click +/− on the arrow to toggle.");
+      } else {
+        setStatus("That arrow already exists.");
+      }
+      state.pendingFrom=null;render();
+    }
+  } else if (state.tool==="delete"){
+    state.edges = state.edges.filter(e=>e.from!==id && e.to!==id);
+    state.nodes = state.nodes.filter(n=>n.id!==id);
+    redistribute(); render(); setStatus("Element removed.");
+  }
+}
+function clickEdge(id){
+  if (state.tool==="delete"){
+    state.edges = state.edges.filter(e=>e.id!==id);
+    render(); setStatus("Arrow removed.");
+  } else {
+    state.selectedEdge = id;
+    setStatus("Arrow selected. Click +/− on the label, or press 'Toggle +/-'.");
+  }
+}
+function togglePolarityById(id){
+  const e = state.edges.find(x=>x.id===id);
+  if (!e) return;
+  e.pol = e.pol==="+"?"-":"+";
+  render();
+}
+function togglePolaritySelected(){
+  if (state.selectedEdge!=null) togglePolarityById(state.selectedEdge);
+  else if (state.edges.length===1) togglePolarityById(state.edges[0].id);
+  else setStatus("Click an arrow first to select it, then press Toggle.");
+}
+
+/* ============ Cycle detection ============ */
+function findCycles(){
+  const adj = {}; state.nodes.forEach(n=>adj[n.id]=[]);
+  state.edges.forEach(e=>{if(adj[e.from])adj[e.from].push({to:e.to,eid:e.id,pol:e.pol});});
+  const cycles=[];
+  function dfs(start,curr,pathN,pathE,visited){
+    for (const nx of adj[curr]||[]){
+      if (nx.to===start && pathN.length>=2){
+        cycles.push({nodes:[...pathN,start], edges:[...pathE,nx.eid], pols:[...pathE.map(eid=>state.edges.find(x=>x.id===eid).pol), nx.pol]});
+      } else if (!visited.has(nx.to) && nx.to>start){ // canonical: smallest id is start
+        visited.add(nx.to);
+        dfs(start,nx.to,[...pathN,nx.to],[...pathE,nx.eid],visited);
+        visited.delete(nx.to);
+      }
+    }
+  }
+  // try each node as a start (constrained: only nodes with id smaller than continuing nodes)
+  state.nodes.forEach(n=>{dfs(n.id,n.id,[n.id],[],new Set([n.id]));});
+  // dedupe by edge set
+  const seen=new Set(); const uniq=[];
+  cycles.forEach(c=>{const k=[...c.edges].sort((a,b)=>a-b).join("|"); if(!seen.has(k)){seen.add(k);uniq.push(c);}});
+  return uniq;
+}
+function toggleLoops(){
+  if (state.loops.length){state.loops=[];render();$("t-loops").classList.remove("on");setStatus("Loops cleared.");return;}
+  const cs = findCycles();
+  state.loops = cs.slice(0,5); // up to 5 loops shown
+  $("t-loops").classList.toggle("on",state.loops.length>0);
+  render();
+  setStatus(state.loops.length?`Found ${state.loops.length} loop${state.loops.length>1?"s":""}.`:"No closed loops yet.");
+}
+
+/* ============ Rendering ============ */
+function bezierPath(a,b){
+  // curve from a (on circle) to b (on circle) through interior
+  const ax=a.x, ay=a.y, bx=b.x, by=b.y;
+  // control point: midpoint pulled toward center by 60%
+  const mx=(ax+bx)/2, my=(ay+by)/2;
+  const cx=CX+(mx-CX)*0.30, cy=CY+(my-CY)*0.30;
+  // shorten ends slightly so arrowhead sits at edge of node
+  const tShrink=22; // px to pull back from node
+  const dxa=ax-cx, dya=ay-cy; const la=Math.hypot(dxa,dya)||1; const sxa=ax-dxa/la*tShrink, sya=ay-dya/la*tShrink;
+  const dxb=bx-cx, dyb=by-cy; const lb=Math.hypot(dxb,dyb)||1; const sxb=bx-dxb/lb*tShrink, syb=by-dyb/lb*tShrink;
+  const mid = bezierPoint(0.55, sxa,sya, cx,cy, sxb,syb);
+  return {d:`M${sxa.toFixed(1)},${sya.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${sxb.toFixed(1)},${syb.toFixed(1)}`, lx:mid.x, ly:mid.y};
+}
+function bezierPoint(t,x1,y1,cx,cy,x2,y2){
+  const it=1-t;
+  return {x: it*it*x1 + 2*it*t*cx + t*t*x2, y: it*it*y1 + 2*it*t*cy + t*t*y2};
+}
+function loopColor(i){const cols=["pink","lilac","gold"]; return cols[i%cols.length];}
+function loopHex(c){return ({pink:"#d6457f",lilac:"#8a6fbf",gold:"#e9c46a"})[c];}
+function loopMarker(c){return ({pink:"arrLoop1",lilac:"arrLoop2",gold:"arrLoop3"})[c];}
+
+function render(){
+  // empty instruction
+  $("emptyInstr").style.display = state.nodes.length===0 ? "block" : "none";
+  // build edge -> loop color map
+  const edgeLoop = {};
+  state.loops.forEach((l,i)=>{const c=loopColor(i); l.edges.forEach(eid=>{if(!(eid in edgeLoop)) edgeLoop[eid]=c;});});
+  // edges layer
+  const eL = $("edgesLayer"); eL.innerHTML="";
+  const lblL = $("labelsLayer"); lblL.innerHTML="";
+  state.edges.forEach(e=>{
+    const a=nodeById(e.from), b=nodeById(e.to); if(!a||!b)return;
+    const p = bezierPath(a,b);
+    const lc = edgeLoop[e.id];
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    path.setAttribute("d",p.d);
+    path.setAttribute("class","edge-path "+(e.pol==="+"?"pos":"neg")+(lc?" loop-edge":""));
+    if (lc){ path.setAttribute("stroke", loopHex(lc)); path.setAttribute("marker-end", `url(#${loopMarker(lc)})`); }
+    else { path.setAttribute("marker-end", e.pol==="+"?"url(#arrPos)":"url(#arrNeg)"); }
+    path.addEventListener("click",ev=>{ev.stopPropagation();clickEdge(e.id);});
+    eL.appendChild(path);
+    // label
+    const lblBg = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    lblBg.setAttribute("cx",p.lx);lblBg.setAttribute("cy",p.ly);lblBg.setAttribute("r",10);
+    lblBg.setAttribute("fill","#fff");lblBg.setAttribute("stroke",e.pol==="+"?"#2a9d8f":"#e85d3a");lblBg.setAttribute("stroke-width",1.5);
+    lblBg.style.cursor="pointer";
+    lblBg.addEventListener("click",ev=>{ev.stopPropagation();togglePolarityById(e.id);});
+    lblL.appendChild(lblBg);
+    const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
+    lbl.setAttribute("x",p.lx);lbl.setAttribute("y",p.ly);
+    lbl.setAttribute("class","edge-label "+(e.pol==="+"?"pos":"neg"));
+    lbl.textContent = e.pol;
+    lbl.addEventListener("click",ev=>{ev.stopPropagation();togglePolarityById(e.id);});
+    lblL.appendChild(lbl);
+  });
+  // nodes layer
+  const nL = $("nodesLayer"); nL.innerHTML="";
+  state.nodes.forEach(n=>{
+    // label outside circle
+    const outX = CX + (R+22)*Math.cos(n.angle);
+    const outY = CY + (R+22)*Math.sin(n.angle);
+    const labelG = document.createElementNS("http://www.w3.org/2000/svg","g");
+    // text wrap: if label has spaces and is long, split into 2 lines
+    const words = n.label.split(/\s+/);
+    let lines=[n.label];
+    if (n.label.length>14 && words.length>=2){
+      const half=Math.ceil(words.length/2);
+      lines=[words.slice(0,half).join(" "), words.slice(half).join(" ")];
+    }
+    lines.forEach((ln,j)=>{
+      const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x",outX); t.setAttribute("y", outY + (j-(lines.length-1)/2)*15);
+      t.setAttribute("class","node-label");
+      // adjust text-anchor by angle
+      if (Math.cos(n.angle)>0.3) t.setAttribute("text-anchor","start");
+      else if (Math.cos(n.angle)<-0.3) t.setAttribute("text-anchor","end");
+      else t.setAttribute("text-anchor","middle");
+      t.textContent=ln; labelG.appendChild(t);
+    });
+    nL.appendChild(labelG);
+    // node circle
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",n.x);c.setAttribute("cy",n.y);c.setAttribute("r",12);
+    c.setAttribute("class","node-bg" + (state.pendingFrom===n.id?" sel":""));
+    c.addEventListener("click",ev=>{ev.stopPropagation();clickNode(n.id);});
+    c.addEventListener("mouseover",()=>{if(state.tool==="delete")c.classList.add("del-hover");});
+    c.addEventListener("mouseout",()=>c.classList.remove("del-hover"));
+    nL.appendChild(c);
+  });
+  // counters
+  $("cn").textContent=state.nodes.length;
+  $("ce").textContent=state.edges.length;
+  $("cl").textContent=state.loops.length;
+}
+
+/* ============ Save / Print ============ */
+function svgString(){
+  const svg = $("canvas").cloneNode(true);
+  // strip the empty instruction
+  const inst = svg.querySelector("#emptyInstr"); if (inst) inst.remove();
+  // inline a stylesheet for SVG portability
+  const style = document.createElementNS("http://www.w3.org/2000/svg","style");
+  style.textContent = `
+    .node-bg{fill:#fff;stroke:#1c93b6;stroke-width:2.5;}
+    .node-bg.sel{fill:#fff3da;stroke:#e9c46a;}
+    .node-label{font:600 13px 'Segoe UI',sans-serif;fill:#1a2340;text-anchor:middle;}
+    .edge-path{fill:none;stroke:#888;stroke-width:2;}
+    .edge-path.pos{stroke:#2a9d8f;}.edge-path.neg{stroke:#e85d3a;}
+    .edge-path.loop-edge{stroke-width:4.5;}
+    .edge-label{font:700 18px 'Segoe UI',sans-serif;text-anchor:middle;dominant-baseline:central;}
+    .edge-label.pos{fill:#2a9d8f;}.edge-label.neg{fill:#e85d3a;}
+    .guide{fill:none;stroke:#dde3eb;stroke-width:2;stroke-dasharray:4 4;}
+  `;
+  svg.insertBefore(style, svg.firstChild);
+  svg.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  svg.setAttribute("width","800"); svg.setAttribute("height","640");
+  return new XMLSerializer().serializeToString(svg);
+}
+function saveSVG(){
+  const s = svgString();
+  const blob = new Blob([s],{type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download="connection_circle.svg"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  setStatus("SVG downloaded.");
+}
+function savePNG(){
+  const s = svgString();
+  const blob = new Blob([s],{type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = ()=>{
+    const cv = document.createElement("canvas"); cv.width=1600; cv.height=1280;
+    const ctx = cv.getContext("2d");
+    ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+    cv.toBlob(b=>{
+      const u=URL.createObjectURL(b);
+      const a=document.createElement("a"); a.href=u; a.download="connection_circle.png"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(u),1000);
+    },"image/png");
+    URL.revokeObjectURL(url);
+    setStatus("PNG downloaded.");
+  };
+  img.onerror=()=>{setStatus("Couldn't render PNG — try Save SVG instead.");URL.revokeObjectURL(url);};
+  img.src = url;
+}
+function clearAll(){
+  if (state.nodes.length===0 && state.edges.length===0) return;
+  if (!confirm("Clear the whole canvas?")) return;
+  state.nodes=[]; state.edges=[]; state.loops=[]; state.pendingFrom=null; state.selectedEdge=null;
+  render(); setStatus("Cleared.");
+}
+
+/* ============ Keyboard ============ */
+document.addEventListener("keydown",e=>{
+  if ($("modal").classList.contains("on")) return; // modal handles its own
+  if (e.target.tagName==="INPUT") return;
+  if (e.key==="a"||e.key==="A"){e.preventDefault();openAddNode();}
+  else if (e.key==="x"||e.key==="X"){setTool("delete");}
+  else if (e.key==="l"||e.key==="L"){toggleLoops();}
+  else if (e.key==="Escape"){state.tool="none";state.pendingFrom=null;state.selectedEdge=null;$("t-arrow").classList.remove("on");$("t-del").classList.remove("on");render();setStatus("Cancelled.");}
+});
+
+renderModes(); renderStages(); render();
+</script>
+</body>
+</html>
